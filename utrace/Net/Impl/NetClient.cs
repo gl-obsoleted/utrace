@@ -137,8 +137,10 @@ namespace utrace
                     string reply = _receivedBuffer.ToString(0, _receivedBuffer.Length - 2);
                     if (reply.Length > 0)
                     {
+                        // by replacing these [], we ensure that BBCode parsing wouldn't be 
+                        // interupted by unintentional BBCode-unawared characters
                         UsLogging.Printf("sv (reply) >");
-                        UsLogging.Printf(reply);
+                        UsLogging.Printf(reply.Replace('[', '<').Replace(']', '>')); 
                     }
 
                     UsLogging.Printf("sv (ready for next command) > ");
