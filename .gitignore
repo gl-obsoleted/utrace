@@ -1,0 +1,5 @@
+/*.suo
+/.nuget
+/bin
+/packages
+/utrace/obj
