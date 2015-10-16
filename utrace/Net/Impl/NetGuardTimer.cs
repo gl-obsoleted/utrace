@@ -56,6 +56,9 @@ namespace utrace
                 _timer = null;
             }
         }
+
+        public bool IsActive { get { return _timer != null && _timer.Enabled; } }
+
         void OnTimeout(object sender, System.Timers.ElapsedEventArgs e)
         {
             SysPost.InvokeMulticast(this, Timeout);

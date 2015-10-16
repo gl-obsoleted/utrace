@@ -48,8 +48,8 @@ namespace utrace
         {
             _client.Connected += OnConnected;
             _client.Disconnected += OnDisconnected;
+            _client.Prompted += OnPrompted;
 
-            _client.RegisterCmdHandler(eNetCmd.SV_HandshakeResponse, Handle_HandshakeResponse);
             _client.RegisterCmdHandler(eNetCmd.SV_KeepAliveResponse, Handle_KeepAliveResponse);
             _client.RegisterCmdHandler(eNetCmd.SV_ExecCommandResponse, Handle_ExecCommandResponse);
             _client.RegisterCmdHandler(eNetCmd.SV_App_Logging, Handle_ServerLogging);
@@ -107,23 +107,13 @@ namespace utrace
                 return;
             }
 
-            UsCmd cmd = new UsCmd();
-            cmd.WriteNetCmd(eNetCmd.CL_ExecCommand);
-            cmd.WriteString(cmdText);
-            Send(cmd);
+            _client.SendText(cmdText + '\n');
 
             UsLogging.Printf(string.Format("command executed: [b]{0}[/b]", cmdText));
         }
 
         private void OnConnected(object sender, EventArgs e)
         {
-            UsCmd cmd = new UsCmd();
-            cmd.WriteInt16((short)eNetCmd.CL_Handshake);
-            cmd.WriteInt16(Properties.Settings.Default.VersionMajor);
-            cmd.WriteInt16(Properties.Settings.Default.VersionMinor);
-            cmd.WriteInt16(Properties.Settings.Default.VersionPatch);
-            _client.SendPacket(cmd);
-
             _tickTimer.Start();
             _guardTimer.Activate();
         }
@@ -136,20 +126,21 @@ namespace utrace
             SysPost.InvokeMulticast(this, LogicallyDisconnected);
         }
 
+        private void OnPrompted(object sender, EventArgs e)
+        {
+            if (_guardTimer.IsActive)
+            {
+                UsLogging.Printf("Server prompt received for the first time, connection validated.");
+                _guardTimer.Deactivate();
+
+                SysPost.InvokeMulticast(this, LogicallyConnected);
+            }
+        }
+
         private void OnGuardingTimeout(object sender, EventArgs e)
         {
             UsLogging.Printf(LogWndOpt.Error, "guarding timeout, closing connection...");
             Disconnect();
-        }
-
-        private bool Handle_HandshakeResponse(eNetCmd cmd, UsCmd c)
-        {
-            UsLogging.Printf("eNetCmd.SV_HandshakeResponse received, connection validated.");
-
-            SysPost.InvokeMulticast(this, LogicallyConnected);
-
-            _guardTimer.Deactivate();
-            return true;
         }
 
         private bool Handle_KeepAliveResponse(eNetCmd cmd, UsCmd c)
@@ -190,9 +181,6 @@ namespace utrace
 
             if (_currentTimeInMilliseconds - _lastKeepAlive > INTERVAL_KeepAlive)
             {
-                UsCmd cmd = new UsCmd();
-                cmd.WriteNetCmd(eNetCmd.CL_KeepAlive);
-                _client.SendPacket(cmd);
                 _lastKeepAlive = _currentTimeInMilliseconds;
             }
 

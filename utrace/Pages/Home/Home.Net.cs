@@ -37,19 +37,6 @@ namespace utrace.Pages
                     cb_targetIP.Items.Add(remoteAddr);
                     UsLogging.Printf("{0} is appended into the recent connection list.", remoteAddr);
                 }
-
-                // query switches and sliders
-                {
-                    UsCmd cmd = new UsCmd();
-                    cmd.WriteNetCmd(eNetCmd.CL_QuerySwitches);
-                    NetManager.Instance.Send(cmd);
-                }
-                {
-                    UsCmd cmd = new UsCmd();
-                    cmd.WriteNetCmd(eNetCmd.CL_QuerySliders);
-                    NetManager.Instance.Send(cmd);
-                }
-
             }));
         }
 

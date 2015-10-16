@@ -37,10 +37,16 @@ using System.Threading.Tasks;
 
 namespace utrace
 {
+    public class NetConfig
+    {
+        public const int BufferSize = 1024;
+    }
+
     public class NetClient : IDisposable
     {
         public event SysPost.StdMulticastDelegation Connected;
         public event SysPost.StdMulticastDelegation Disconnected;
+        public event SysPost.StdMulticastDelegation Prompted;
 
         public bool IsConnected { get { return _tcpClient != null; } }
 
@@ -102,34 +108,43 @@ namespace utrace
             }
         }
 
+        private StringBuilder _receivedBuffer = new StringBuilder();
+
+        private bool hasPromptInTheEnd(StringBuilder builder)
+        {
+            if (builder.Length < 2)
+                return false;
+
+            return builder[builder.Length - 1] == ' ' && builder[builder.Length - 2] == '>';
+        }
+
         public void Tick_ReceivingData()
         {
             try
             {
+                byte[] buf = new byte[NetConfig.BufferSize];
                 while (_tcpClient.Available > 0)
                 {
-                    byte[] cmdLenBuf = new byte[2];
-                    int cmdLenRead = _tcpClient.GetStream().Read(cmdLenBuf, 0, cmdLenBuf.Length);
-                    ushort cmdLen = BitConverter.ToUInt16(cmdLenBuf, 0);
-                    if (cmdLenRead > 0 && cmdLen > 0)
+                    int read = _tcpClient.GetStream().Read(buf, 0, buf.Length);
+                    if (read > 0)
                     {
-                        byte[] buffer = new byte[cmdLen];
-                        int len = _tcpClient.GetStream().Read(buffer, 0, buffer.Length);
-
-                        UsCmd cmd = new UsCmd(buffer);
-                        UsCmdExecResult result = _cmdParser.Execute(cmd);
-                        switch (result)
-                        {
-                            case UsCmdExecResult.Succ:
-                                break;
-                            case UsCmdExecResult.Failed:
-                                UsLogging.Printf("net cmd execution failed: {0}.", new UsCmd(buffer).ReadNetCmd());
-                                break;
-                            case UsCmdExecResult.HandlerNotFound:
-                                UsLogging.Printf("net unknown cmd: {0}.", new UsCmd(buffer).ReadNetCmd());
-                                break;
-                        }
+                        _receivedBuffer.Append(Encoding.Default.GetString(buf, 0, read));
                     }
+                }
+
+                if (hasPromptInTheEnd(_receivedBuffer))
+                {
+                    string reply = _receivedBuffer.ToString(0, _receivedBuffer.Length - 2);
+                    if (reply.Length > 0)
+                    {
+                        UsLogging.Printf("sv (reply) >");
+                        UsLogging.Printf(reply);
+                    }
+
+                    UsLogging.Printf("sv (ready for next command) > ");
+                    SysPost.InvokeMulticast(this, Prompted);
+
+                    _receivedBuffer.Clear();
                 }
             }
             catch (Exception ex)
@@ -145,15 +160,19 @@ namespace utrace
 
         public void SendPacket(UsCmd cmd)
         {
+            UsLogging.Printf("SendPacket() is not available for this tool, use SendText() instead.");
+        }
+
+        public void SendText(string content)
+        {
             try
             {
-                byte[] cmdLenBytes = BitConverter.GetBytes((ushort)cmd.WrittenLen);
-                _tcpClient.GetStream().Write(cmdLenBytes, 0, cmdLenBytes.Length);
-                _tcpClient.GetStream().Write(cmd.Buffer, 0, cmd.WrittenLen);
+                byte[] bytes = Encoding.Default.GetBytes(content);
+                _tcpClient.GetStream().Write(bytes, 0, bytes.Length);
             }
             catch (Exception ex)
             {
-                DisconnectOnError("error detected while sending data.", ex);
+                DisconnectOnError("error detected while sending text data.", ex);
             }
         }
 
