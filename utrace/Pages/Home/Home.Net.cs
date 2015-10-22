@@ -37,6 +37,9 @@ namespace utrace.Pages
                     cb_targetIP.Items.Add(remoteAddr);
                     UsLogging.Printf("{0} is appended into the recent connection list.", remoteAddr);
                 }
+
+                NetManager.Instance.ExecuteCmd("debugmsg on");
+                NetManager.Instance.ExecuteCmd("debugmsg");
             }));
         }
 

@@ -132,19 +132,18 @@ namespace utrace
                     }
                 }
 
-                if (hasPromptInTheEnd(_receivedBuffer))
+                if (_receivedBuffer.Length > 0)
                 {
-                    string reply = _receivedBuffer.ToString(0, _receivedBuffer.Length - 2);
+                    string reply = _receivedBuffer.ToString();
                     if (reply.Length > 0)
                     {
                         // by replacing these [], we ensure that BBCode parsing wouldn't be 
                         // interupted by unintentional BBCode-unawared characters
-                        UsLogging.Printf("sv (reply) >");
-                        UsLogging.Printf(reply.Replace('[', '<').Replace(']', '>')); 
+                        UsLogging.Printf(reply.Replace('[', '<').Replace(']', '>'));
                     }
 
-                    UsLogging.Printf("sv (ready for next command) > ");
-                    SysPost.InvokeMulticast(this, Prompted);
+                    if (hasPromptInTheEnd(_receivedBuffer))
+                        SysPost.InvokeMulticast(this, Prompted);
 
                     _receivedBuffer.Clear();
                 }

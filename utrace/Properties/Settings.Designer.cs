@@ -72,7 +72,7 @@ namespace utrace.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("5555")]
+        [global::System.Configuration.DefaultSettingValueAttribute("13800")]
         public string ServerPort {
             get {
                 return ((string)(this["ServerPort"]));
